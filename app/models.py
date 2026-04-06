@@ -7,6 +7,12 @@ from .database import Base
 def generate_uuid():
     return str(uuid.uuid4())
 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    username = Column(String, unique=True, index=True)
+    role = Column(String, nullable=False, default="viewer")
+
 class Workflow(Base):
     __tablename__ = "workflows"
 

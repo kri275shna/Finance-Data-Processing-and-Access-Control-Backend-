@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
+from app.auth import require_admin, require_any_role
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Request, IdempotencyKey, WorkflowState, Workflow, AuditLog, RuleExecutionLog, Rule
@@ -15,7 +16,8 @@ def create_request(
     payload: RequestCreate, 
     background_tasks: BackgroundTasks,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(require_admin)
 ):
     # Check Idempotency
     existing_key = db.query(IdempotencyKey).filter(IdempotencyKey.key == idempotency_key).first()
@@ -80,7 +82,7 @@ def process_wrapper(request_id: str):
 
 
 @router.get("/{request_id}", response_model=RequestResponse)
-def get_request(request_id: str, db: Session = Depends(get_db)):
+def get_request(request_id: str, db: Session = Depends(get_db), user=Depends(require_any_role)):
     req = db.query(Request).filter(Request.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -88,7 +90,7 @@ def get_request(request_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{request_id}/history", response_model=list[AuditLogResponse])
-def get_request_history(request_id: str, db: Session = Depends(get_db)):
+def get_request_history(request_id: str, db: Session = Depends(get_db), user=Depends(require_any_role)):
     logs = db.query(AuditLog).filter(AuditLog.request_id == request_id).order_by(AuditLog.created_at.asc()).all()
     
     results = []
@@ -106,7 +108,7 @@ def get_request_history(request_id: str, db: Session = Depends(get_db)):
     return results
 
 @router.get("/{request_id}/explain", response_model=ExplainResponse)
-def explain_request(request_id: str, db: Session = Depends(get_db)):
+def explain_request(request_id: str, db: Session = Depends(get_db), user=Depends(require_any_role)):
     req = db.query(Request).filter(Request.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")

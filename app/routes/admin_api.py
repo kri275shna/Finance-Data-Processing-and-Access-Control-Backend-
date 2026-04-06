@@ -4,7 +4,9 @@ from app.database import get_db
 from app.models import Workflow, WorkflowState, Rule, Transition
 from app.schemas import WorkflowCreate, WorkflowResponse, RuleCreate, RuleResponse, TransitionCreate, TransitionResponse
 
-router = APIRouter(prefix="/api/admin", tags=["Admin Configuration"])
+from app.auth import require_admin
+
+router = APIRouter(prefix="/api/admin", tags=["Admin Configuration"], dependencies=[Depends(require_admin)])
 
 @router.post("/workflows", response_model=WorkflowResponse)
 def create_workflow(payload: WorkflowCreate, db: Session = Depends(get_db)):
